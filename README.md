@@ -1,2 +1,5 @@
-# ABaE
-Demonstration of Encryption using FPGAs
+# EncryptED
+
+A Demonstration of Encryption using FPGAs
+
+
