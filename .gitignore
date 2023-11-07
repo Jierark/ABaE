@@ -1,1 +1,6 @@
 ./remote/*
+./obj/*
+*.log
+*.vcd
+*.out
+*.tar.gz
