@@ -1,5 +1,6 @@
 ./remote/*
 ./obj/*
+./obj
 *.log
 *.vcd
 *.out
