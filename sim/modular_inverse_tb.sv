@@ -43,13 +43,13 @@ module modular_inverse_tb();
     valid_in = 1;
     #10;
     valid_in = 0;
-    while (~valid_out) begin
-        #10;
-    end
     #3000;
     if (out == expected) begin
-        $display("wow it works");
+        $display("Test case passed");
+    end else begin
+        $display("Test failed")
     end
+    
     $display("Sim Finished");
     $finish;
   end
