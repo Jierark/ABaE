@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 `default_nettype none
-// Computes b such that a_in * b = 1 mod base for 512 bit numbers
+// Computes b such that a_in * b = 1 mod base for 512 bit numbers. Theoretically works for smaller sizes too.
 module modular_inverse #(parameter WIDTH=512) (
     input wire clk_in,
     input wire rst_in,
