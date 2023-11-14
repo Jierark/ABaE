@@ -8,11 +8,11 @@ module top_level(
     input wire [7:0] pmoda,
     input wire uart_rxd,
 
-    output logic [15:0] led    
+    output logic [15:0] led,    
     output logic [2:0] rgb0,   
     output logic [2:0] rgb1,   
     output logic [7:0] pmodb, 
-    output logic uart_txd,
+    output logic uart_txd
     );
     assign led = sw; 
 
