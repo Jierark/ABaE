@@ -1,12 +1,12 @@
-module uart_rx(
+module uart_rx #(parameter BAUD_RATE = 3_000_000) (
     input wire clk_in, 
     input wire rst_in, 
 
     input wire uart_rxd_in, 
     output logic[7:0] byte_out,
-    output logic valid_out,
+    output logic valid_out
 );
-    localparam CYCLES_PER_BAUD = 100_000_000 / 3_000_000;
+    localparam CYCLES_PER_BAUD = 100_000_000 / BAUD_RATE;
 
     localparam WAITING = 0; 
     localparam BUILDING = 1;
@@ -17,34 +17,41 @@ module uart_rx(
     logic [3:0] bit_idx; 
     logic [1:0] bit_buffer;
 
-    localparam RX_LENGTH = 8; 
+    localparam RX_LENGTH = 7; 
 
     initial begin 
         state <= WAITING;
         bit_idx <= 0;
         bit_buffer <= 0; // For matching laptop's generated baud rate
+        valid_out <= 0;
+        byte_out <= 0;
     end
     always_ff @(posedge clk_in) begin 
         if (rst_in) begin 
             state <= WAITING;
             bit_idx <= 0;
             bit_buffer <= 0;
+            valid_out <= 0;
         end else begin 
             if (state == WAITING) begin  // Waiting for initial low
+                valid_out <= 0;
+                bit_idx <= 0;
                 if (uart_rxd_in == 0) begin 
-                    state <= GOT_ZERO;
-                    baud_counter <= 1; 
+                    state <= BUILDING;
+                    baud_counter <= 0; 
                 end 
             end else begin 
                 baud_counter <= baud_counter + 1;
                 if (baud_counter == CYCLES_PER_BAUD - 1) begin
-                    bit_buffer <= {bit_buffer[0], uart_rxd_in};
-                    bit_idx <= bit_idx + 1;
+                    baud_counter <= 0;
+                    // bit_buffer <= {bit_buffer[0], uart_rxd_in};
                     if (bit_idx == RX_LENGTH + 1) begin 
                         state <= WAITING;
                         valid_out <= 1;
                     end else begin
-                        byte_out <= bit_buffer[1];
+                        // byte_out[bit_idx - 1] <= bit_buffer[1];
+                        bit_idx <= bit_idx + 1;
+                        byte_out[bit_idx] <= uart_rxd_in;
                     end
                 end
             end 
@@ -54,7 +61,7 @@ endmodule
 
 
 // Based on Manta's tx module
-module uart_tx(
+module uart_tx #(parameter BAUD_RATE = 3_000_000) (
     input wire clk_in, 
     input wire rst_in, 
     input wire valid_in,
@@ -113,6 +120,7 @@ module uart_tx(
                     if (bit_idx == TX_LENGTH + 1) begin 
                         state <= WAITING;
                         ready_out <= 1;
+                        // Add direct transfer to next here
                     end else begin
                         uart_txd_out <= buffer[bit_idx];
                     end
