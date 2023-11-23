@@ -2,7 +2,7 @@ module uart_rx #(parameter BAUD_RATE = 3_000_000) (
     input wire clk_in, 
     input wire rst_in, 
 
-    input wire uart_rxd_in, 
+    input wire uart_rx_in, 
     output logic[7:0] byte_out,
     output logic valid_out
 );
@@ -40,7 +40,7 @@ module uart_rx #(parameter BAUD_RATE = 3_000_000) (
                 valid_out <= 0;
                 bit_idx <= 0;
                 // bit_buffer <= 0;
-                if (uart_rxd_in == 0) begin 
+                if (uart_rx_in == 0) begin 
                     state <= DELAY;
                     baud_counter <= 0; 
                 end 
@@ -54,9 +54,9 @@ module uart_rx #(parameter BAUD_RATE = 3_000_000) (
             end else if (state == BUILDING) begin 
                 if (baud_counter == CYCLES_PER_BAUD - 1) begin
                     baud_counter <= 0;
-                    // bit_buffer <= {bit_buffer[0], uart_rxd_in};
+                    // bit_buffer <= {bit_buffer[0], uart_rx_in};
                     bit_idx <= bit_idx + 1;
-                    byte_out[bit_idx] <= uart_rxd_in;
+                    byte_out[bit_idx] <= uart_rx_in;
                     // byte_out[bit_idx - 1] <= bit_buffer[1];
                     if (bit_idx == RX_LENGTH) begin 
                         state <= DONE;
@@ -68,7 +68,7 @@ module uart_rx #(parameter BAUD_RATE = 3_000_000) (
                 if (baud_counter == CYCLES_PER_BAUD - 1) begin
                     baud_counter <= 0;
                     state <= WAITING;
-                    if (uart_rxd_in == 1) begin // Got stop bit
+                    if (uart_rx_in == 1) begin // Got stop bit
                         valid_out <= 1;
                     end 
                 end else begin 
@@ -87,7 +87,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
     input wire valid_in,
     input wire[7:0] byte_in,
 
-    output logic uart_txd_out,
+    output logic uart_tx_out,
     output logic ready_out
     );
 
@@ -108,7 +108,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
         state = WAITING;
         buffer = 0; 
         ready_out = 1;
-        uart_txd_out = 1;
+        uart_tx_out = 1;
         baud_counter = 0;
         bit_idx <= 0; 
     end 
@@ -118,7 +118,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
             state <= WAITING;
             buffer <= 0; 
             ready_out <= 1;
-            uart_txd_out <= 1;
+            uart_tx_out <= 1;
             baud_counter <= 0;
             bit_idx <= 0; 
         end else begin 
@@ -129,7 +129,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
                     ready_out <= 0;
                     baud_counter <= 0;
                     bit_idx <= 0; 
-                    uart_txd_out <= 1'b0; // 0 bit
+                    uart_tx_out <= 1'b0; // 0 bit
                 end else begin 
                     ready_out <= 1;
                 end
@@ -142,7 +142,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
                         ready_out <= 1;
                         // Add direct transfer to next here
                     end else begin
-                        uart_txd_out <= buffer[bit_idx];
+                        uart_tx_out <= buffer[bit_idx];
                     end
                 end
             end

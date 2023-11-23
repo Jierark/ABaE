@@ -43,14 +43,14 @@ module modular_inverse_tb();
     valid_in = 1;
     #10;
     valid_in = 0;
-    #3000;
+    #300000; // naptime
     if (out == expected) begin
-        $display("Test case passed");
+        $display("\033[32m Test case passed");
     end else begin
-        $display("Test failed")
+        $display("\033[31m Test failed\033[37m, expected %d got %d", expected, out);
     end
     
-    $display("Sim Finished");
+    $display("\033[37m Sim Finished");
     $finish;
   end
 endmodule

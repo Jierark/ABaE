@@ -7,7 +7,7 @@ module uart_tx_tb();
     logic rst_in;
     logic tx_valid_in;
     logic [7:0] byte_in;
-    logic uart_txd;
+    logic uart_tx;
     logic tx_ready_out;
 
     logic [9:0] bit_grabber;
@@ -17,7 +17,7 @@ module uart_tx_tb();
         .rst_in(rst_in),
         .valid_in(tx_valid_in),
         .byte_in(byte_in),
-        .uart_txd_out(uart_txd),
+        .uart_tx_out(uart_tx),
         .ready_out(tx_ready_out));
 
     logic passed = 1;
@@ -46,7 +46,7 @@ module uart_tx_tb();
             #10;
             tx_valid_in = 0;
             for (int j = 0; j < 10; j=j+1) begin
-                bit_grabber[j] = uart_txd;
+                bit_grabber[j] = uart_tx;
                 #330;
             end
             if (bit_grabber[8:1] != i[7:0]) begin
@@ -59,12 +59,12 @@ module uart_tx_tb();
         end
 
         if (passed == 0) begin 
-            $display("Tests failed.");
+            $display("\033[31m Tests failed.");
         end else begin
-            $display("Tests passed!");
+            $display("\033[32m Tests passed!");
         end
 
-        $display("Simulation Finished");
+        $display("\033[37m Simulation Finished");
         $finish;
     end
 endmodule

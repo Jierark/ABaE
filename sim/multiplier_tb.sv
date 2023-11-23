@@ -45,11 +45,11 @@ module multiplier_tb();
     valid_in = 0;
     #3000; // Should only take 256 clock cycles to finish, but add some leeway just in case
     if (N == expected) begin
-        $display("Test case passed");
+        $display("\033[32m Test case passed");
     end else begin
-        $display("Test failed");
+        $display("\033[31m Test failed");
     end
-    $display("Test with larger numbers");
+    $display("\033[37m Test with larger numbers");
     p = 308113484502254276214653084379069091219;
     q = 193690634914747133184576417654126124729;
     expected = 59678696439036731833174790408137592454209857625042749229656692202628272654651;
@@ -62,12 +62,12 @@ module multiplier_tb();
     valid_in = 0;
     #3000; // Should only take 256 clock cycles to finish, but add some leeway just in case
     if (N == expected) begin
-        $display("Test case passed");
+        $display("\033[32m Test case passed");
     end else begin
-        $display("Test failed");
+        $display("\033[31m Test failed");
     end
     
-    $display("Sim Finished");
+    $display("\033[37m Sim Finished");
     $finish;
   end
 endmodule

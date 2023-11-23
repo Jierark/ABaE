@@ -30,7 +30,7 @@ module top_level(
 
     uart_rx #(.BAUD_RATE(12_000_000)) receiver(.clk_in(clk_100mhz),
                      .rst_in(sys_rst),
-                     .uart_rxd_in(uart_rxd),
+                     .uart_rx_in(uart_rxd),
                      .byte_out(uart_byte),
                      .valid_out(uart_rx_valid_out));
 

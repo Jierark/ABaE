@@ -101,7 +101,5 @@ module modular_inverse #(parameter WIDTH=512) (
             endcase            
         end
     end
-    
-
 endmodule
 `default_nettype wire

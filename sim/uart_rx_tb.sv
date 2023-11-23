@@ -5,7 +5,7 @@ module uart_rx_tb();
     logic clk_in;
     logic rst_in;
     logic [7:0] byte_out;
-    logic uart_rxd;
+    logic uart_rx;
     logic valid_out;
     logic passed;
 
@@ -13,7 +13,7 @@ module uart_rx_tb();
 
     uart_rx receiver(.clk_in(clk_in),
                      .rst_in(rst_in),
-                     .uart_rxd_in(uart_rxd),
+                     .uart_rx_in(uart_rx),
                      .byte_out(byte_out),
                      .valid_out(valid_out));
 
@@ -33,17 +33,17 @@ module uart_rx_tb();
         rst_in = 1;
         #10;
         rst_in = 0;
-        uart_rxd = 1;
+        uart_rx = 1;
         passed = 1;
         #500
         for (int i = 0; i < 256; i = i + 1) begin 
-            uart_rxd = 0;
+            uart_rx = 0;
             #330;
             for (int j = 0; j < 8; j=j+1) begin
-                uart_rxd = i[j];
+                uart_rx = i[j];
                 #330;
             end
-            uart_rxd = 1;
+            uart_rx = 1;
             #330
             
             if (i != byte_out) begin 
@@ -56,12 +56,12 @@ module uart_rx_tb();
         end
 
         if (passed == 0) begin 
-            $display("Tests failed.");
+            $display("\033[31m Tests failed.");
         end else begin
-            $display("Tests passed!");
+            $display("\033[32m Tests passed!");
         end        
 
-        $display("Simulation Finished");
+        $display("\033[37m Simulation Finished");
         $finish;
     end
 endmodule
