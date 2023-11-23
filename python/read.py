@@ -2,33 +2,30 @@ from serial import Serial, STOPBITS_ONE, SEVENBITS
 from serial.tools import list_ports
 import time
 
-print('Serial Ports:\n' + '='*30)
-for port in list_ports.comports():
-    print(port.device)
-print('='*30)
-port = input('Enter the FPGA Port: ')
+# print('Serial Ports:\n' + '='*30)
+# for port in list_ports.comports():
+#     print(port.device)
+# print('='*30)
+# port = input('Enter the FPGA Port: ')
+port = "COM4"
 
 # The following is reconstructed from manta's source code
-# chunk_size = 256
+
 ser_module = Serial(port=str(port), baudrate=3_000_000, timeout=1)
 
 with ser_module as ser: 
-    print(f"Starting Serial Write at port {port}")
-    data = [4, 2]
-    ports = [1, 2]
-    for idx, i in enumerate(ports):
-        outbound_bytes = f"W{i:04X}{data[idx]:04X}\r\n".encode('ascii')
-        ser.write(outbound_bytes)
+    count = 0
+    prev_val = None
+    while (True):
+       
+        # val = ser.read(ser_module.in_waiting)
 
-    time.sleep(3)
-    print(f"Starting Serial Read at port {port}")
-    while(True):
-        inbound = b""
-        for i in range(1, 3):
-            outbound = f"R{i:04X}\r\n".encode('ascii')
-            ser_module.write(outbound)
+        val = ser.read()
+        true_val = int.from_bytes(val)
+        # true_val = 0
+        if val != prev_val and val: print(count,":", true_val, ":", val)
 
-            inbound += ser.read(len(outbound))
-        print('Serial In: ', inbound)
-        # time.sleep(0.01)
+        # print(count,":",int.from_bytes(val), ":", val)
+        count += 1
+        prev_val = val if val else prev_val
         

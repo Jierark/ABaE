@@ -27,13 +27,6 @@ read_xdc ./xdc/top_level.xdc
 # set the part number so Vivado knows how to build (each FPGA is different)
 set_part $partNum
 
-# Read in all IP
-read_ip ./ip/floating_point_multiplier/floating_point_multiplier.xci
-read_ip ./ip/floating_point_adder/floating_point_adder.xci
-read_ip ./ip/floating_point_inv_sqrt/floating_point_inv_sqrt.xci
-generate_target all [get_ips]
-synth_ip [get_ips]
-
 #Run Synthesis
 synth_design -top top_level -part $partNum -verbose
 write_checkpoint -force $outputDir/post_synth.dcp

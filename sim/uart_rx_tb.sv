@@ -1,0 +1,68 @@
+`timescale 1ns / 1ps
+`default_nettype none
+module uart_rx_tb();
+
+    logic clk_in;
+    logic rst_in;
+    logic [7:0] byte_out;
+    logic uart_rxd;
+    logic valid_out;
+    logic passed;
+
+    logic [9:0] bit_grabber;
+
+    uart_rx receiver(.clk_in(clk_in),
+                     .rst_in(rst_in),
+                     .uart_rxd_in(uart_rxd),
+                     .byte_out(byte_out),
+                     .valid_out(valid_out));
+
+    always begin
+        #5;  //every 5 ns switch...so period of clock is 10 ns...100 MHz clock
+        clk_in = !clk_in;
+    end
+    //initial block...this is our test simulation
+    initial begin
+        $dumpfile("uart_rx_tb.vcd"); //file to store value change dump (vcd)
+        $dumpvars(0,uart_rx_tb);
+        $display("Starting Sim"); //print nice message at start
+        clk_in = 0;
+
+        rst_in = 0; // Reset the system
+        #10;
+        rst_in = 1;
+        #10;
+        rst_in = 0;
+        uart_rxd = 1;
+        passed = 1;
+        #500
+        for (int i = 0; i < 256; i = i + 1) begin 
+            uart_rxd = 0;
+            #330;
+            for (int j = 0; j < 8; j=j+1) begin
+                uart_rxd = i[j];
+                #330;
+            end
+            uart_rxd = 1;
+            #330
+            
+            if (i != byte_out) begin 
+                passed = 0;
+                $display("Failed, got %b, expected %8b", byte_out, i[7:0]);
+            end else begin
+                // $display("Got %b, expected %8b", byte_out, i[7:0]);
+            end
+            #1000;
+        end
+
+        if (passed == 0) begin 
+            $display("Tests failed.");
+        end else begin
+            $display("Tests passed!");
+        end        
+
+        $display("Simulation Finished");
+        $finish;
+    end
+endmodule
+`default_nettype wire
