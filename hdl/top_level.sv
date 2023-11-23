@@ -26,63 +26,19 @@ module top_level(
 
 
     logic [7:0] uart_byte; 
-    // logic [7:0] uart_byte_rx; 
+    logic uart_rx_valid_out;
 
-    // uart_rx receiver(.clk_in(clk_100mhz),
-    //                  .rst_in(sys_rst),
-    //                  .uart_rxd_in(uart_rxd),
-    //                  .byte_out(uart_byte_rx));
+    uart_rx #(.BAUD_RATE(12_000_000)) receiver(.clk_in(clk_100mhz),
+                     .rst_in(sys_rst),
+                     .uart_rxd_in(uart_rxd),
+                     .byte_out(uart_byte),
+                     .valid_out(uart_rx_valid_out));
 
-    // assign led[7:0] = uart_byte_rx; 
-
-    logic counter; 
-    logic tx_ready_out; 
-    logic tx_valid_in;
-
-    // assign tx_valid_in = 1;
-    logic state;
-    initial state = 1;
-    initial counter = 1;
     always_ff @(posedge clk_100mhz) begin 
-        if (state == 0) begin 
-            if (counter == 0 && tx_ready_out) begin
-                state <= 1;
-                counter <= 1;
-                tx_valid_in <= 1;
-            end else begin 
-                counter <= counter + 1;
-            end
-        end else begin 
-            if (tx_ready_out && tx_valid_in == 0) begin
-                state <= 0;
-                uart_byte <= uart_byte + 1;
-            end else begin 
-                tx_valid_in <= 0;
-            end
-        end
-        
-
-        // if (tx_ready_out) begin 
-        //     counter <= counter + 1; 
-        //     if (counter == 0) begin 
-        //         uart_byte <= uart_byte + 1;
-        //     end else begin
-        //         tx_valid_in <= 0;
-        //     end
-        //     // tx_valid_in <= 1;
-        // end else begin
-        //     // tx_valid_in <= 0;
-        // end
+        if (uart_rx_valid_out) 
+            led <= {8'b0, uart_byte};
     end
 
-    assign led = {8'b0, uart_byte};
-
-    uart_tx transmitter(.clk_in(clk_100mhz),
-                        .rst_in(sys_rst),
-                        .valid_in(tx_valid_in),
-                        .byte_in(uart_byte),
-                        .uart_txd_out(uart_txd),
-                        .ready_out(tx_ready_out));
 
 endmodule
 `default_nettype wire ;
