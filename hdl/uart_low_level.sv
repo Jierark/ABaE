@@ -1,9 +1,10 @@
-module uart_rx #(parameter BAUD_RATE = 3_000_000) (
+module uart_rx #(parameter BAUD_RATE = 12_000_000) (
     input wire clk_in, 
     input wire rst_in, 
 
     input wire uart_rx_in, 
     output logic[7:0] byte_out,
+    input wire ready_in,
     output logic valid_out
 );
     localparam CYCLES_PER_BAUD = 100_000_000 / BAUD_RATE;
@@ -81,11 +82,11 @@ endmodule
 
 
 // Based on Manta's tx module
-module uart_tx #(parameter BAUD_RATE = 3_000_000) (
+module uart_tx #(parameter BAUD_RATE = 12_000_000) (
     input wire clk_in, 
     input wire rst_in, 
     input wire valid_in,
-    input wire[7:0] byte_in,
+    input wire [7:0] byte_in,
 
     output logic uart_tx_out,
     output logic ready_out
@@ -94,7 +95,7 @@ module uart_tx #(parameter BAUD_RATE = 3_000_000) (
     logic [3:0] bit_idx; 
     logic [8:0] buffer; 
 
-    localparam CYCLES_PER_BAUD = 100_000_000 / 3_000_000;
+    localparam CYCLES_PER_BAUD = 100_000_000 / BAUD_RATE;
     localparam TX_LENGTH = 8; 
 
     localparam WAITING = 0; 

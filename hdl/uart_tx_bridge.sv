@@ -1,26 +1,33 @@
-// We assume full duplex UART until this breaks
+`timescale 1ns / 1ps
+`default_nettype none 
 
 // This module is in charge of sending data to the FTDI USB Module via UART
 // to be eventually sent to the laptop. 
-module uart_tx_bridge #(parameter MESSAGE_SIZE = 512) (
+module uart_tx_bridge #(parameter MESSAGE_SIZE = 512, parameter HEADER_SIZE=32) (
     input wire clk_in,
     input wire rst_in,
 
-    input wire new_transmission_in,    // HIGH when new full message to be made
+    // ctrl interface
     input wire [MESSAGE_SIZE-1:0] message_in,
-    input wire [1:0] mode_in,          // 2'b00 = MIXED, 2'b01 = RAW, 2'b10 = ENC
+    input wire [HEADER_SIZE-1:0] header_in,
 
-    output logic uart_tx_out; 
-    output logic busy_out;             // Signal to input modules that module is not ready to send (e.g. because other laptop isn't running)
+    input wire ctrl_valid_in,      // HIGH when new full message to be made
+    output logic bdge_ready_out,   // Signal to input modules that module is ready to send (e.g. because other laptop isn't running)
 
+    // low level interface
+    input wire ll_ready_in,
+    output logic [7:0] ll_byte_out,
+    output logic ll_valid_out
 ); 
+
 endmodule
 
-module message_unpack #(parameter MESSAGE_SIZE = 512) (
-    input wire clk_in, 
-    input wire rst_in, 
+// module message_unpack #(parameter MESSAGE_SIZE = 512) (
+//     input wire clk_in, 
+//     input wire rst_in, 
 
-    input [MESSAGE_SIZE-1:0] message_in, 
-    output [7:0]
-);
-endmodule
+//     input [MESSAGE_SIZE-1:0] message_in, 
+//     output [7:0]
+// );
+// endmodule
+`default_nettype wire

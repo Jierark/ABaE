@@ -50,7 +50,7 @@ module uart_rx_tb();
                 passed = 0;
                 $display("Failed, got %b, expected %8b", byte_out, i[7:0]);
             end else begin
-                // $display("Got %b, expected %8b", byte_out, i[7:0]);
+                // $display("Got %b, expected %8b", byte_out, i[7:0]); 
             end
             #1000;
         end
