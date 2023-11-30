@@ -5,13 +5,15 @@ module top_level(
     input wire clk_100mhz,
     input wire [15:0] sw,      
     input wire [3:0] btn,
-    input wire [7:0] pmoda,
+    input wire [3:0] pmoda,
+    input logic pmodb_sdi,
     input wire uart_rxd,
 
     output logic [15:0] led,    
     output logic [2:0] rgb0,   
     output logic [2:0] rgb1,   
-    output logic [7:0] pmodb, 
+    output logic [3:0] pmodb,
+    output wire pmoda_sdi, 
     output logic uart_txd
     );
     // assign led = sw; 
@@ -73,7 +75,7 @@ module top_level(
                         .tx_data_out(pmoda[0]), // sdo
                         .tx_sel_out(pmoda[1]),  // ss
                         .tx_clk_out(pmoda[2]),  // clk
-                        .tx_data_in(),  // sdi - TODO
+                        .tx_data_in(pmoda_sdi),  // sdi
                         .tx_key_req_out(pmoda[3]), // key_req
 
                         // rx internals
@@ -84,7 +86,7 @@ module top_level(
                         .rx_data_in(pmodb[0]), // sdo
                         .rx_sel_in(pmodb[1]),  // ss
                         .rx_clk_in(pmodb[2]),  // clk
-                        .rx_data_send(), // sdi - TODO
+                        .rx_data_send(pmodb_sdi), // sdi
                         .rx_key_req_in(pmodb[3])  // key_req
                     );
 
