@@ -33,7 +33,7 @@ module multiplier #(parameter WIDTH=256) (
                     end
                 end
                 COMPUTING: begin
-                    if (index == 8'hff) begin
+                    if (index == WIDTH-1) begin
                         c_out <= product;
                         valid_out <= 1;
                         busy_out <= 0;
