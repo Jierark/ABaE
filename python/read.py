@@ -1,4 +1,4 @@
-from serial import Serial, STOPBITS_ONE, SEVENBITS
+from serial import Serial
 from serial.tools import list_ports
 import time
 

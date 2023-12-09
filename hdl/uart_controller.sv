@@ -36,7 +36,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
                 .ready_out()
             );
 
-    uart_tx_bridge #(.MESSAGE_SIZE(MESSAGE_SIZE)
+    uart_tx_bridge #(.MESSAGE_SIZE(MESSAGE_SIZE),
                      .HEADER_SIZE(HEADER_SIZE)) tx_bridge(
                         .clk_in(clk_in),
                         .rst_in(rst_in),
@@ -58,7 +58,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
                 .valid_out()
             );
 
-    uart_rx_bridge #(.MESSAGE_SIZE(MESSAGE_SIZE)
+    uart_rx_bridge #(.MESSAGE_SIZE(MESSAGE_SIZE),
                      .HEADER_SIZE(HEADER_SIZE)) rx_bridge(
                         .clk_in(clk_in),
                         .rst_in(rst_in),
