@@ -2,7 +2,7 @@
 `default_nettype none
 
 module multiplier #(parameter WIDTH=256) (
-    // Take 2 256 bit numbers and multiply them together. This is only used during key generation.
+    // Take 2 WIDTH bit numbers and multiply them together. This is only used during key generation.
     // Super naive 
     input wire clk_in,
     input wire rst_in,
@@ -44,7 +44,7 @@ module multiplier #(parameter WIDTH=256) (
                     index <= index+1;
                 end
                 DONE: begin
-                    valid_out <= 1;
+                    valid_out <= 0;
                     state <= IDLE;
                 end
             endcase
