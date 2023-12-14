@@ -23,8 +23,9 @@ module mod_exponent #(parameter WIDTH = 512) (
     logic [$clog2(WIDTH)-1:0] current_index;
     logic [WIDTH*2:0] reduce_input1, reduce_input2;
     logic [WIDTH-1:0] reduce_output1, reduce_output2;
-    logic [1:0] counter; // used for montgomery reduction
+    logic finished, finished2; // used to keep track of the reductions finishing
     // Used to keep track of the current base
+    logic reduction_valid_in, reduction_valid_out, reduction_busy;
     mont_reduction #(.WIDTH(WIDTH))
      reduction(.clk_in(clk_in),
                 .rst_in(rst_in),
@@ -32,9 +33,13 @@ module mod_exponent #(parameter WIDTH = 512) (
                 .N(modulo),
                 .R(R),
                 .N_prime(inv_modulo),
-                .x_out(reduce_output1)
+                .valid_in(reduction_valid_in),
+                .x_out(reduce_output1),
+                .valid_out(reduction_valid_out),
+                .busy_out(reduction_busy)
      );
     // Used to keep track of the running product, and then the final reduction
+    logic reduction2_valid_in, reduction2_valid_out, reduction2_busy;
     mont_reduction #(.WIDTH(WIDTH))
      reduction2(.clk_in(clk_in),
                 .rst_in(rst_in),
@@ -42,7 +47,10 @@ module mod_exponent #(parameter WIDTH = 512) (
                 .N(modulo),
                 .R(R),
                 .N_prime(inv_modulo),
-                .x_out(reduce_output2)
+                .valid_in(reduction2_valid_in),
+                .x_out(reduce_output2),
+                .valid_out(reduction2_valid_out),
+                .busy_out(reduction2_busy)
      );
 
 
@@ -58,7 +66,7 @@ module mod_exponent #(parameter WIDTH = 512) (
             current_index <= 0;
             state <= IDLE;
             busy_out <= 0;
-            counter <= 0;
+            finished <= 0;
             reduce_input1 <= 0;
             reduce_input2 <= 0;
         end else begin
@@ -81,49 +89,64 @@ module mod_exponent #(parameter WIDTH = 512) (
                         end else begin
                             state <= UPDATE_BASE;
                         end
-                        counter <= 0;
+                        finished <= 0;
                     end
                 end
                 UPDATE_BASE: begin
                     reduce_input1 <= current_base * current_base;
+                    reduction_valid_in <= 1'b1;
                     state <= REDUCE;
                 end
                 UPDATE_PRODUCT: begin
                     reduce_input1 <= current_base * current_base;
+                    reduction_valid_in <= 1'b1;
                     reduce_input2 <= running_product * current_base;
+                    reduction2_valid_in <= 1'b1;
                     state <= REDUCE;
                 end
                 REDUCE: begin
-                    // just chill for 4 cycles until the reduction finishes
-                    if (counter == 2'b11) begin
-                        state <= NEXT;
+                    if (exponent[current_index] == 1) begin
+                        if (reduction_valid_out) begin
+                            finished <= 1'b1;
+                            current_base <= reduce_output1;
+                        end
+                        if (reduction2_valid_out) begin
+                            finished2 <= 1'b1;
+                            running_product <= reduce_output2;
+                        end
+                        if (finished == 1'b1 && finished2 == 1'b1) begin
+                            state <= NEXT;
+                        end
+                        reduction_valid_in <= 0;
+                        reduction2_valid_in <= 0;
                     end else begin
-                        counter <= counter + 1;    
+                        if (reduction_valid_out) begin
+                            finished <= 1'b1;
+                            current_base <= reduce_output1;
+                        end
+                        if (finished) begin
+                            state <= NEXT;
+                        end
+                        reduction_valid_in <= 0;
                     end
                 end
                 NEXT: begin
                     //setup logic for the next iteration
                     current_index <= current_index + 1;
-                    current_base <= reduce_output1;
-                    if (exponent[current_index] == 1) begin
-                        running_product <= reduce_output2;
-                    end
                     state <= COMPUTING;
-                    counter <= 0;
+                    finished <= 0;
                 end
                 LAST_REDUCTION: begin
                     reduce_input2 <= running_product;
-                    counter <= 0;
+                    reduction2_valid_in <= 1'b1;
                     state <= WAITING;
                 end
                 WAITING: begin
-                    if (counter == 2'b11) begin
+                    if (reduction2_valid_out) begin
                         c_out <= reduce_output2;
                         valid_out <= 1;
                         busy_out <= 0;
                         state <= DONE;
-                    end else begin
-                        counter <= counter + 1;
                     end
                 end
                 DONE: begin

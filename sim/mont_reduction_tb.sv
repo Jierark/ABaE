@@ -7,6 +7,7 @@ module mont_reduction_tb();
     logic [WIDTH-1:0] x_mont, N, N_prime, x_out;
     logic [WIDTH:0] R;
     logic [WIDTH-1:0] expected;
+    logic valid_in, valid_out, busy_out;
     mont_reduction #(.WIDTH(WIDTH))
         uut(
         .clk_in(clk_in),
@@ -15,7 +16,10 @@ module mont_reduction_tb();
         .N(N),
         .R(R),
         .N_prime(N_prime),
-        .x_out(x_out)
+        .valid_in(valid_in),
+        .x_out(x_out),
+        .valid_out(valid_out),
+        .busy_out(busy_out)
     );
   always begin
       #5;
@@ -28,22 +32,28 @@ module mont_reduction_tb();
     clk_in = 0;
     rst_in = 0;
     $display("Testing reduction to natural numbers from Montgomery Form");
-    $display("Testing small numbers");
-    R = 17'b1_0000_0000_0000_0000;
-    N = 33227;
-    N_prime = 39907;
-    x_mont = (46 * R) % N;
-    expected = 46;
-    #10;
-    rst_in = 1;
-    #10;
-    rst_in = 0;
-    #40;
-    if (x_out == expected) begin
-        $display("Pass for small numbers");
-    end else begin
-      $display("Fail for small numbers");
-    end
+    // Adjust width to 16 for this to work
+    // $display("Testing small numbers");
+    // R = 17'b1_0000_0000_0000_0000;
+    // N = 33227;
+    // N_prime = 39907;
+    // x_mont = (46 * R) % N;
+    // expected = 46;
+    // #10;
+    // rst_in = 1;
+    // #10;
+    // rst_in = 0;
+    // valid_in <= 1;
+    // #10;
+    // valid_in <= 0;
+    // #9000;
+    // if (x_out == expected) begin
+    //     $display("Pass for small numbers");
+    // end else begin
+    //   $display("Fail for small numbers");
+    //   $display("Here's a debug value");
+    //   $display(x_out);
+    // end
     
     $display("Testing larger numbers");
     R = 2**512;
@@ -55,11 +65,16 @@ module mont_reduction_tb();
     rst_in = 1;
     #10;
     rst_in = 0;
-    #40;
+    valid_in <= 1;
+    #10;
+    valid_in <= 0;
+    #9000;
     if (x_out == expected) begin
         $display("Pass for large numbers");
     end else begin
       $display("Fail for large numbers");
+      $display("Here's a debug value");
+      $display(x_out);
     end
     $display("Sim Finished");
     $finish;
