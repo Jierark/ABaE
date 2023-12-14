@@ -48,6 +48,10 @@ sim:
 	iverilog -g2012 -o vcd/sim.out $(SIM)
 	vvp vcd/sim.out
 
+.PHONY: check
+check:
+	iverilog -g2012 hdl/*.sv
+
 .PHONY: clean
 
 .PHONY: test

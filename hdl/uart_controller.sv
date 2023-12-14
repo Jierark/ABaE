@@ -13,7 +13,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
     input wire [MESSAGE_SIZE-1:0] tx_encrypted_in,
     input wire [MESSAGE_SIZE-1:0] tx_decrypted_in,
     input wire [HEADER_SIZE-1:0] tx_header_in,
-    input wire [1:0] tx_mode_in,          // 2'b00 = MIXED, 2'b01 = ENC, 2'b10 = DEC
+    input wire [1:0] tx_mode_in,          // 2'b11 = MIXED, 2'b01 = ENC, 2'b00 = DEC, 2'b10 = ENC
     
 
     // uart_rx params
@@ -29,9 +29,9 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
     output logic [13:0] debug,
     input wire debug_btn
 );
-    localparam MIXED = 0;
+    localparam MIXED = 3;
     localparam ENC = 1;
-    localparam DEC = 2;
+    localparam DEC = 0;
 
     // controller to tx bridge
     logic [MESSAGE_SIZE-1:0] tx_bdge_message_in;
@@ -137,7 +137,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
                     end else begin // we are waiting for data to come in
                         ext_rx_valid_out <= 0;
 
-                        debug[0] <= 1; // debug
+                        // debug[0] <= 1; // debug
                     end
                 end
                 RX_STALLED: begin
@@ -268,7 +268,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
             MIXED : tx_bdge_message_in = (tx_mux) ? tx_encrypted_in : tx_decrypted_in; // alternate
             ENC : tx_bdge_message_in = tx_encrypted_in;
             DEC : tx_bdge_message_in = tx_decrypted_in;
-            default: tx_bdge_message_in = tx_decrypted_in;
+            default: tx_bdge_message_in = tx_encrypted_in;
         endcase
     end
 
