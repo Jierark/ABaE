@@ -3,23 +3,57 @@
 
 module mod_exponent #(parameter WIDTH = 512) (
     // Take a number and raise it to some power, mod another number
-    // TODO: get a modular multiplication module that can work with this (montgomery multiplication perhaps?)
-    // might just be able to build it into this...
+    // Base should already be converted to montgomery form
     input wire clk_in,
     input wire rst_in,
     input wire [WIDTH-1:0] base,
     input wire [WIDTH-1:0] exponent,
     input wire [WIDTH-1:0] modulo,
+    input wire [WIDTH-1:0] inv_modulo, //needed for montgomery
+    input wire [WIDTH:0] R, //needed for montgomery
+    input wire [WIDTH-1:0] start_product, //need the montgomery form of 1
     input wire valid_in,
     output logic [WIDTH-1:0] c_out,
     output logic valid_out,
     output logic busy_out
     );
-    typedef enum {IDLE=0,COMPUTING=1,DONE=2} states;
+    typedef enum {IDLE=0,COMPUTING=1,DONE=2,UPDATE_PRODUCT=3,REDUCE=5,UPDATE_BASE=4,NEXT=6,LAST_REDUCTION=7,WAITING=8} states;
     states state;
-    logic [WIDTH-1:0] running_product;
-    logic [WIDTH-1:0] current_base;
+    logic [WIDTH-1:0] running_product, current_base;
     logic [$clog2(WIDTH)-1:0] current_index;
+    logic [WIDTH*2:0] reduce_input1, reduce_input2;
+    logic [WIDTH-1:0] reduce_output1, reduce_output2;
+    logic finished, finished2; // used to keep track of the reductions finishing
+    // Used to keep track of the current base
+    logic reduction_valid_in, reduction_valid_out, reduction_busy;
+    mont_reduction #(.WIDTH(WIDTH))
+     reduction(.clk_in(clk_in),
+                .rst_in(rst_in),
+                .x_mont(reduce_input1),
+                .N(modulo),
+                .R(R),
+                .N_prime(inv_modulo),
+                .valid_in(reduction_valid_in),
+                .x_out(reduce_output1),
+                .valid_out(reduction_valid_out),
+                .busy_out(reduction_busy)
+     );
+    // Used to keep track of the running product, and then the final reduction
+    logic reduction2_valid_in, reduction2_valid_out, reduction2_busy;
+    mont_reduction #(.WIDTH(WIDTH))
+     reduction2(.clk_in(clk_in),
+                .rst_in(rst_in),
+                .x_mont(reduce_input2),
+                .N(modulo),
+                .R(R),
+                .N_prime(inv_modulo),
+                .valid_in(reduction2_valid_in),
+                .x_out(reduce_output2),
+                .valid_out(reduction2_valid_out),
+                .busy_out(reduction2_busy)
+     );
+
+
     always_ff @(posedge clk_in) begin
         // Declare a running product
         // start with base
@@ -28,33 +62,91 @@ module mod_exponent #(parameter WIDTH = 512) (
         // Increment i
         // repeat until reach end
         if (rst_in) begin
-            running_product <= 1;
-            current_index <= 1;
+            running_product <= start_product;
+            current_index <= 0;
             state <= IDLE;
             busy_out <= 0;
+            finished <= 0;
+            reduce_input1 <= 0;
+            reduce_input2 <= 0;
         end else begin
             case (state)
                 IDLE: begin
                     if (valid_in) begin
                         state <= COMPUTING;
-                        running_product <= 1;
-                        current_index <= 1; //skip the least significant bit since it doesn't affect the overall computation.
-                        current_base <= base % modulo;
+                        running_product <= start_product;
+                        current_index <= 0;
+                        current_base <= base; 
                         busy_out <= 1;
                     end
                 end 
                 COMPUTING: begin
-                    if (current_index == WIDTH - 1) begin
-                        state <= DONE;
-                        c_out <= running_product;
-                        valid_out <= 1;
-                        busy_out <= 0;
+                    if (current_index == WIDTH-1) begin
+                        state <= LAST_REDUCTION;
                     end else begin
                         if (exponent[current_index] == 1) begin
-                            running_product <= (running_product * current_base) % modulo;
+                            state <= UPDATE_PRODUCT;
+                        end else begin
+                            state <= UPDATE_BASE;
                         end
-                        current_index <= current_index + 1;
-                        current_base <= (current_base * current_base) % modulo;
+                        finished <= 0;
+                    end
+                end
+                UPDATE_BASE: begin
+                    reduce_input1 <= current_base * current_base;
+                    reduction_valid_in <= 1'b1;
+                    state <= REDUCE;
+                end
+                UPDATE_PRODUCT: begin
+                    reduce_input1 <= current_base * current_base;
+                    reduction_valid_in <= 1'b1;
+                    reduce_input2 <= running_product * current_base;
+                    reduction2_valid_in <= 1'b1;
+                    state <= REDUCE;
+                end
+                REDUCE: begin
+                    if (exponent[current_index] == 1) begin
+                        if (reduction_valid_out) begin
+                            finished <= 1'b1;
+                            current_base <= reduce_output1;
+                        end
+                        if (reduction2_valid_out) begin
+                            finished2 <= 1'b1;
+                            running_product <= reduce_output2;
+                        end
+                        if (finished == 1'b1 && finished2 == 1'b1) begin
+                            state <= NEXT;
+                        end
+                        reduction_valid_in <= 0;
+                        reduction2_valid_in <= 0;
+                    end else begin
+                        if (reduction_valid_out) begin
+                            finished <= 1'b1;
+                            current_base <= reduce_output1;
+                        end
+                        if (finished) begin
+                            state <= NEXT;
+                        end
+                        reduction_valid_in <= 0;
+                    end
+                end
+                NEXT: begin
+                    //setup logic for the next iteration
+                    current_index <= current_index + 1;
+                    state <= COMPUTING;
+                    finished <= 0;
+                end
+                LAST_REDUCTION: begin
+                    reduce_input2 <= running_product;
+                    reduction2_valid_in <= 1'b1;
+                    state <= WAITING;
+                end
+                WAITING: begin
+                    if (reduction2_valid_out) begin
+                        c_out <= reduce_output2;
+                        valid_out <= 1;
+                        busy_out <= 0;
+                        state <= DONE;
                     end
                 end
                 DONE: begin
