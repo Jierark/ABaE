@@ -68,7 +68,7 @@ module mont_reduction_tb();
     valid_in <= 1;
     #10;
     valid_in <= 0;
-    #9000;
+    #11000;
     if (x_out == expected) begin
         $display("Pass for large numbers");
     end else begin

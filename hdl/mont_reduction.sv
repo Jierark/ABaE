@@ -36,7 +36,7 @@ module mont_reduction #(parameter WIDTH=512)
         .busy_out(mult_busy)
      );
     
-    typedef enum  {IDLE=0,FIRST_OP=1,SECOND_OP=2,CHECK=3,DONE=4} fsm_state;
+    typedef enum  {IDLE=0,FIRST_OP=1,SETUP_SECOND=2,SECOND_OP=3,CHECK=4,DONE=5} fsm_state;
     fsm_state state;
     always_ff @(posedge clk_in) begin 
         if (rst_in) begin
@@ -58,17 +58,28 @@ module mont_reduction #(parameter WIDTH=512)
                 end 
                 FIRST_OP: begin
                     if (mult_valid_out) begin
-                        state <= SECOND_OP;
-                        m <= mult_out[WIDTH:0];
+                        state <= SETUP_SECOND;
+                        m <= mult_out[WIDTH-1:0];
                     end
                     mult_valid_in <= 1'b0;
                     // m <-- (x_mont mod R) *  N_prime mod R
                 end
+                SETUP_SECOND: begin
+                    mult_a <= m;
+                    mult_b <= {1'b0,N};
+                    mult_valid_in <= 1'b1;
+                    state <= SECOND_OP;
+                end
                 SECOND_OP: begin
+                    if (mult_valid_out) begin
+                        t <= $signed({1'b0,x_mont}) - $signed(mult_out) >>> R_length;
+                        state <= CHECK;
+                    end
+                    mult_valid_in <= 0;
                     // t <-- (x_mont - m * N) // R (bit shift)
-                    t <= ($signed({1'b0,x_mont}) - m * $signed({1'b0,N})) >>> R_length; //probably will need to rewrite this
-                    t <= x_mont;
-                    state <= CHECK;
+                    // t <= ($signed({1'b0,x_mont}) - m * $signed({1'b0,N})) >>> R_length; //probably will need to rewrite this
+                    // t <= x_mont;
+                    // state <= CHECK;
                 end
                 CHECK: begin
                     if (t < 0) begin
