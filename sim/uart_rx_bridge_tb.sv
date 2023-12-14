@@ -56,6 +56,14 @@ module uart_rx_bridge_tb();
             #10; // wait until ready to process
         end
         // 32 bit header, 512 bit message
+
+        // send START_BYTE
+        ll_byte_in = 8'hbb;
+        ll_valid_in = 1;
+        #10;
+        ll_valid_in = 0;
+        #80; 
+
         header = 32'hFAFA_FAFA;
         for (int i = 0; i < 32; i = i + 8) begin 
             ll_byte_in = header[i+:8];
@@ -99,6 +107,13 @@ module uart_rx_bridge_tb();
         while (!ll_ready_out) begin
             #10; // wait until ready to process
         end
+        // send START_BYTE
+        ll_byte_in = 8'hbb;
+        ll_valid_in = 1;
+        #10;
+        ll_valid_in = 0;
+        #80; 
+
         // 32 bit header, 512 bit message
         header = 32'hBCBC_BCBC;
         for (int i = 0; i < 32; i = i + 8) begin 

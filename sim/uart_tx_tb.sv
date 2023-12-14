@@ -12,7 +12,7 @@ module uart_tx_tb();
 
     logic [9:0] bit_grabber;
 
-    uart_tx transmitter(
+    uart_tx #(.BAUD_RATE(3_000_000)) transmitter(
         .clk_in(clk_in),
         .rst_in(rst_in),
         .valid_in(tx_valid_in),
