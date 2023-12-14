@@ -13,6 +13,7 @@ module mod_exponent #(parameter WIDTH = 512) (
     input wire [WIDTH:0] R, //needed for montgomery
     input wire [WIDTH-1:0] start_product, //need the montgomery form of 1
     input wire valid_in,
+    input wire ready_in, // downstream module ready to accept results
     output logic [WIDTH-1:0] c_out,
     output logic valid_out,
     output logic busy_out
@@ -150,8 +151,10 @@ module mod_exponent #(parameter WIDTH = 512) (
                     end
                 end
                 DONE: begin
-                    state <= IDLE;
-                    valid_out <= 0;
+                    if (ready_in) begin 
+                        state <= IDLE;
+                        valid_out <= 0;
+                    end
                 end
             endcase
         end

@@ -8,13 +8,15 @@ module uart_rx_tb();
     logic uart_rx;
     logic valid_out;
     logic passed;
+    logic ready_in; 
 
     logic [9:0] bit_grabber;
 
-    uart_rx receiver(.clk_in(clk_in),
+    uart_rx #(.BAUD_RATE(3_000_000)) receiver(.clk_in(clk_in),
                      .rst_in(rst_in),
                      .uart_rx_in(uart_rx),
                      .byte_out(byte_out),
+                     .ready_in(ready_in),
                      .valid_out(valid_out));
 
     always begin
@@ -35,6 +37,8 @@ module uart_rx_tb();
         rst_in = 0;
         uart_rx = 1;
         passed = 1;
+
+        ready_in = 1; // for now downstream always ready
         #500
         for (int i = 0; i < 256; i = i + 1) begin 
             uart_rx = 0;
