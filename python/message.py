@@ -73,6 +73,15 @@ class Message:
     def __str__(self):
         return 'header: ' + str(self.parsed_header) + "\n" + 'contents: ' + str(self.message.decode('all-escapes'))
             
+    def reduced_str(self, text=False):
+        comb = str(self.header.decode('all-escapes')) + " | " + str(self.message.decode('all-escapes'))
+        t = ""
+        if text: 
+            try:
+                t += ' "' + self.message.decode('ascii') + '"'
+            except:
+                pass
+        return f"[{len(self.header) + len(self.message)}] " + comb + t
        
 
 

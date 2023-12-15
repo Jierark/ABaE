@@ -27,7 +27,7 @@ module top_level(
 
     
     localparam UART_BAUD_RATE = 12_000_000;
-    localparam MESSAGE_SIZE = 64;
+    localparam MESSAGE_SIZE = 128;
     localparam HEADER_SIZE = 32;
     localparam PRIME_SIZE = MESSAGE_SIZE / 2;
     localparam KEY_SIZE = MESSAGE_SIZE;
@@ -44,15 +44,19 @@ module top_level(
     assign R = 2**KEY_SIZE; // stays fixed  // TODO TRY WRAPPING IN initial
     assign e = 2**16 + 1;
     // TODO: make these a bit larger
-    assign p = 211;
-    assign q = 149;
+    assign p = 32'hA931537B; // 2838582139
+    assign q = 32'hE77FF871; // 3883923569
+
+    
 
     // PRECOMPUTATIONS
     logic[KEY_SIZE-1:0] inv_modulo; // mod inverse of N mod R 
-    assign inv_modulo = 64'h5733638FBA4C4C2F;  
+    assign inv_modulo = 64'hF6B0046405548063;  
 
     logic[KEY_SIZE-1:0] one_montgomery_form; // R % N
-    assign one_montgomery_form = 10830; 
+    assign one_montgomery_form = 64'h66FFEA012155FEB5; 
+
+    assign d = 64'h8C6BF4C29FEE54E1;
     // END PRECOMPUTATIONS
 
     // COMPUTE N
@@ -85,18 +89,20 @@ module top_level(
                 );
 
     // COMPUTE D (PRIVATE EXP)
+    
     logic inv_valid_out,inv_error,inv_busy;
-    modular_inverse #(.WIDTH(KEY_SIZE))
-     modular_inverse(.clk_in(clk_100mhz),
-                     .rst_in(sys_rst),
-                     .a_in(e),
-                     .base(totient),
-                     .valid_in(markiplier_valid_out),
-                     .b_out(d),
-                     .valid_out(inv_valid_out),
-                     .error_out(inv_error),
-                     .busy_out(inv_busy)
-                     );
+    assign inv_valid_out = 1;
+    // modular_inverse #(.WIDTH(KEY_SIZE))
+    //  modular_inverse(.clk_in(clk_100mhz),
+    //                  .rst_in(sys_rst),
+    //                  .a_in(e),
+    //                  .base(totient),
+    //                  .valid_in(markiplier_valid_out),
+    //                  .b_out(d),
+    //                  .valid_out(inv_valid_out),
+    //                  .error_out(inv_error),
+    //                  .busy_out(inv_busy)
+    //                  );
 
     // both of these quantities may differ between boards.
     
@@ -253,7 +259,8 @@ module top_level(
                     encrypt_valid_in <= 1;
                     // message_to_encrypt <= message_received;
                     // spi_header_buffer <= header_received;
-                    message_to_encrypt <= 64'h0001020304050607;
+                    // message_to_encrypt <= 64'h0001020304050607;
+                    message_to_encrypt <= 64'h000000362e313131;
                     spi_header_buffer <= 32'b001111111_00000000_00000000_0000_1_1_1;
 
                     if (encrypt_busy) begin 
@@ -274,6 +281,9 @@ module top_level(
                     spi_valid_in <= 1;
                     spi_message_in <= encrypted_message;
                     spi_header_in <= spi_header_buffer;
+
+                    // spi_message_in <= 64'h000000362e313131;
+                    // spi_header_in <= 32'b001111111_00000000_00000000_0000_1_1_1;
 
                     if (!spi_ready_out) begin 
                         waiting_on_spi <= 1;
@@ -296,18 +306,25 @@ module top_level(
                     raw_message_buffer <= spi_message_out;
                     uart_header_buffer <= spi_header_in;
 
+                    // message_to_decrypt <= 64'h000000362e313131;
+                    // raw_message_buffer <= 64'h000000362e313131;
+                    // uart_header_buffer <= 32'b001111111_00000000_00000000_0000_1_1_1;
+
                     if (decrypt_busy) begin
                         waiting_on_dec <= 1;
                         spi_ready_in <= 0;
                     end
                 end else begin 
                     decrypt_valid_in <= 0;
+                    // message_to_decrypt <= 0;
+                    // raw_message_buffer <= 0;
+                    // uart_header_buffer <= 0;
                 end
 
                 // DECRYPT -> UART_TX
                 if (waiting_on_tx) begin 
                     if (tx_ready_out) begin
-                        waiting_on_tx <= 0;
+                        // waiting_on_tx <= 0;
                         decrypt_ready_in <= 1;
                     end
                 end else if (decrypt_valid_out) begin
@@ -316,12 +333,22 @@ module top_level(
                     message_to_send_dec <= decrypted_message;
                     header_to_send <= uart_header_buffer;
 
+                    // message_to_send_enc <= 64'h000000362e313131;
+                    // message_to_send_dec <= 64'h000000362e313131;
+                    // header_to_send <= 32'b001111111_00000000_00000000_0000_1_1_1;
+
+                    waiting_on_tx <= 1;
                     if (!tx_ready_out) begin
                         waiting_on_tx <= 1;
                         decrypt_ready_in <= 0;
-                    end
+                    end 
+                    led[0] <= 1;
                 end else begin 
                     tx_valid_in <= 0;
+                    message_to_send_enc <= 0;
+                    message_to_send_dec <= 0;
+                    header_to_send <= 0;
+                    led[0] <= 0;
                 end
             end
         end

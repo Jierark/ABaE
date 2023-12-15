@@ -20,6 +20,7 @@ from serial import Serial
 import time
 from message import Message, Header, Partial
 from manager import Message_Manager
+import sys
 
 class Lock:
     def __init__(self):
@@ -45,8 +46,10 @@ class Lock:
         self.locked = False
 
 class Writer:
-    def  __init__(self):
+    def  __init__(self, quiet, text):
+        self.quiet = quiet
         self.messages = []
+        self.text = text
 
         self.curr_message = None
 
@@ -83,27 +86,75 @@ class Writer:
         if self.curr_message is None:
             if self.messages: 
                 self.curr_message = self.messages.pop(0)
-                print("\033[32mSending message:\033[37m\n" + str(self.curr_message))
+                if self.quiet: 
+                    print("\033[32mSending message:\033[37m: " + self.curr_message.reduced_str(self.text))
+                else:
+                    print("\033[32mSending message:\033[37m\n" + str(self.curr_message))
             else: return None, False
             
         next_byte, continue_msg, just_finished =  self.curr_message.get_next_byte()
+        if just_finished:
+            print("\033[32mFinished message:\033[37m: " + self.curr_message.reduced_str())
         if not continue_msg:
             self.curr_message = None
 
         return next_byte, just_finished
+    
+class Message_Bucket:
+    def __init__(self, text):
+        self.enc = None
+        self.dec = None
+        self.text = text
+        
+    def add_msg(self, msg: Message):
+        is_raw = msg.parsed_header.is_raw
+        if is_raw: 
+            self.enc = msg
+        else: 
+            self.dec = msg
+
+    def __str__(self):
+        res = ""
+        if self.enc is not None:
+            res += "enc: " + self.enc.reduced_str(self.text)
+        if self.enc is not None and self.dec is not None:
+            res += " || "
+        if self.dec is not None:
+            res += "dec: " + self.dec.reduced_str(self.text)
+
+        return res
 
 class Reader:
-    def __init__(self):
+    def __init__(self, quiet, text):
         self.messages_received = {}
         self.current_partial = None
+        self.quiet = quiet
+        self.text = text
 
     def read_loop(self):
         pass
 
-    def concat_msg(self, msg):
-        assert isinstance(msg, Message)
-        print(f"\033[34mGot message:\033[37m\n" + str(msg)) # For now do nothing else
+    def msg_to_print(self, msg: Message):
+        # Assumes message in bucket:
+        id = msg.parsed_header.trans_id
+        bucket = self.messages_received[id] 
+        
+        if self.quiet: 
+            return "\033[34mGot message:\033[37m: " + str(bucket)
+        else:
+            return f"\033[34mGot message:\033[37m\n" + str(msg) # For now do nothing else
 
+
+    def concat_msg(self, msg: Message):
+        assert isinstance(msg, Message)
+        id = msg.parsed_header.trans_id
+        if id not in self.messages_received:
+            self.messages_received[id] = Message_Bucket(self.text)
+        bucket = self.messages_received[id] 
+        bucket.add_msg(msg)
+
+        print(self.msg_to_print(msg))
+        
         # msg_id = msg.parsed_header.trans_id
         # if msg_id not in self.message_received:
         #     self.messages_received[msg_id] = Transmission()
@@ -132,7 +183,7 @@ class Reader:
             return 'start'
         res = self.current_partial.append_byte(byte)
         if res['done']:
-            print("--"*50, res['signal_code'])
+            # print("--"*50, res['signal_code'])
             if self.get_signal(res['signal_code']) == 'ok':
                 self.current_partial = None # clear Partial
                 self.concat_msg(res['contents'])
@@ -143,7 +194,7 @@ class Reader:
 class Display: 
     pass
 
-def main_loop(reader, writer):
+def main_loop(reader, writer, quiet=False):
     port = 'COM4'
     ser_module = Serial(port=str(port), baudrate=12_000_000, timeout=0.0001)
 
@@ -159,16 +210,16 @@ def main_loop(reader, writer):
         while True:
             # Writing
             to_write = None # For printing
-            if not stalled and time.time() - timer > WAIT_TIME:
-                to_write, just_finished_msg = writer.dequeue()
-                # to_write, just_finished_msg = Message.START_BYTE, False
-                # to_write, just_finished_msg = 0xff, False
+            # if not stalled and time.time() - timer > WAIT_TIME:
+            #     to_write, just_finished_msg = writer.dequeue()
+            #     # to_write, just_finished_msg = Message.START_BYTE, False
+            #     # to_write, just_finished_msg = 0xff, False
 
                
-                if to_write is not None:
-                    ser.write(to_write)
-                if just_finished_msg:
-                    timer = time.time()
+            #     if to_write is not None:
+            #         ser.write(to_write)
+            #     if just_finished_msg:
+            #         timer = time.time()
 
             write_print = None if to_write is None else str(bytes([to_write]).decode("all-escapes")).zfill(4)
             
@@ -184,14 +235,14 @@ def main_loop(reader, writer):
                 val = bytes([])
             
             # Printing
-            if to_write is not None or int.from_bytes(val):
+            if not quiet and (to_write is not None or int.from_bytes(val)):
                 print('wrote:', write_print, 'got:', str(val.decode("all-escapes")).zfill(4), 'stalled?:', stalled, 'read_status:', status)
             else:
-                if ix%1000 == 0 and ix > 0:
+                if not quiet and ix%1000 == 0 and ix > 0:
                     print("\033[33mwaiting...\033[37m")
                 ix += 1
 
-            if just_finished_msg:
+            if not quiet and just_finished_msg:
                 print('\033[32mFinished sending message\033[37m')
 
             # Resetting
@@ -202,10 +253,12 @@ def main_loop(reader, writer):
 
             
 
-def entry_point():
+def entry_point(args):
+    quiet = "q" in args
+    text = "t" in args
     manager = Message_Manager()
-    writer = Writer()
-    reader = Reader()
+    writer = Writer(quiet, text)
+    reader = Reader(quiet, text)
 
     # temporary stuff
     # writer.enqueue(manager.make_messages(bytes([i for i in range(0)])))
@@ -219,7 +272,7 @@ def entry_point():
 
     # end temporary
 
-    main_loop(reader, writer)
+    main_loop(reader, writer, quiet)
 
 if __name__ == "__main__":
-    entry_point()
+    entry_point(sys.argv[1:])

@@ -31,6 +31,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
 );
     localparam MIXED = 3;
     localparam ENC = 1;
+    localparam OTHER_ENC = 2;
     localparam DEC = 0;
 
     // controller to tx bridge
@@ -166,6 +167,12 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
     logic signal_unstall_en;
     logic signal_to_send;
 
+    // Set RAW_FLAG
+    logic [HEADER_SIZE-1:0] flipped_header;
+    logic is_raw;
+    assign is_raw = tx_mux || (tx_mode_in[0] ^ tx_mode_in[1]);
+    assign flipped_header = {tx_header_in[HEADER_SIZE-1:3], is_raw, tx_header_in[1:0]};
+
     initial begin
         tx_state = TX_IDLE;
         sent_stall_signal = 0;
@@ -203,7 +210,7 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
 
                     end else if (ext_tx_valid_in || (tx_mux && tx_mode_in == MIXED)) begin
                         tx_ctrl_valid_in <= 1;
-                        tx_bdge_header_in <= tx_header_in; // need to flip bit // TODO <- this
+                        tx_bdge_header_in <= flipped_header;  // need to flip bit // TODO <- this
                         if (tx_bdge_ready_out) begin 
                             // Handle sending both encrypted and decrypted versions
                             tx_state <= TX_DONE_SENDING;
@@ -263,9 +270,10 @@ module uart_controller #(parameter MESSAGE_SIZE = 512,
     // tx speed stuff is on python's side, don't write and you will get full read speed (maybe idk)
 
     // message multiplexer
+
     always_comb begin 
         case (tx_mode_in) 
-            MIXED : tx_bdge_message_in = (tx_mux) ? tx_encrypted_in : tx_decrypted_in; // alternate
+            MIXED : tx_bdge_message_in = (tx_mux) ? tx_encrypted_in : tx_decrypted_in; // alternate, decrypted first
             ENC : tx_bdge_message_in = tx_encrypted_in;
             DEC : tx_bdge_message_in = tx_decrypted_in;
             default: tx_bdge_message_in = tx_encrypted_in;
